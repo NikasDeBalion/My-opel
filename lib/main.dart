@@ -140,19 +140,14 @@ class _TelematicsPageState extends State<TelematicsPage> {
             latestTelematicsData == null
                 ? Text('No data to display')
                 : Expanded(
-                    child: GridView.builder(
-                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2, // Количество столбцов
-                        crossAxisSpacing: 10,
-                        mainAxisSpacing: 10,
-                        childAspectRatio: 2.5, // Соотношение сторон карточек
-                      ),
+                    child: ListView.builder(
                       itemCount: latestTelematicsData!.length,
                       itemBuilder: (context, index) {
                         String key = latestTelematicsData!.keys.elementAt(index);
                         var value = latestTelematicsData![key];
 
                         return Card(
+                          margin: EdgeInsets.all(8),
                           elevation: 4,
                           child: Padding(
                             padding: const EdgeInsets.all(16.0),
