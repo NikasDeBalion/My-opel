@@ -15,11 +15,13 @@ class _TelematicsPageState extends State<TelematicsPage> {
   TextEditingController tokenController = TextEditingController();
   Timer? _timer;
   String? errorMessage;
+  List<String> keysOrder = [];
 
   @override
   void initState() {
     super.initState();
     _loadToken();
+    _loadOrder();
     _timer = Timer.periodic(Duration(seconds: 5), (timer) {
       if (deviceIdController.text.isNotEmpty) {
         fetchTelematicsData();
@@ -77,6 +79,11 @@ class _TelematicsPageState extends State<TelematicsPage> {
           setState(() {
             latestTelematicsData = result[0]; // Получаем последние данные
             errorMessage = null;
+
+            // Если порядок карточек еще не был установлен, инициализируем его
+            if (keysOrder.isEmpty) {
+              keysOrder = latestTelematicsData!.keys.toList();
+            }
           });
         } else {
           setState(() {
@@ -91,6 +98,21 @@ class _TelematicsPageState extends State<TelematicsPage> {
     } catch (e) {
       setState(() {
         errorMessage = 'An error occurred: $e';
+      });
+    }
+  }
+
+  Future<void> _saveOrder() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList('keys_order', keysOrder); // Сохраняем порядок карточек
+  }
+
+  Future<void> _loadOrder() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    List<String>? savedOrder = prefs.getStringList('keys_order');
+    if (savedOrder != null) {
+      setState(() {
+        keysOrder = savedOrder; // Загружаем сохранённый порядок
       });
     }
   }
@@ -140,13 +162,21 @@ class _TelematicsPageState extends State<TelematicsPage> {
             latestTelematicsData == null
                 ? Text('No data to display')
                 : Expanded(
-                    child: ListView.builder(
-                      itemCount: latestTelematicsData!.length,
-                      itemBuilder: (context, index) {
-                        String key = latestTelematicsData!.keys.elementAt(index);
+                    child: ReorderableListView(
+                      onReorder: (int oldIndex, int newIndex) {
+                        setState(() {
+                          if (newIndex > oldIndex) {
+                            newIndex -= 1;
+                          }
+                          final String item = keysOrder.removeAt(oldIndex);
+                          keysOrder.insert(newIndex, item);
+                        });
+                        _saveOrder(); // Сохраняем новый порядок после перемещения
+                      },
+                      children: keysOrder.map((key) {
                         var value = latestTelematicsData![key];
-
                         return Card(
+                          key: ValueKey(key), // Ключ для идентификации карточек
                           margin: EdgeInsets.all(8),
                           elevation: 4,
                           child: Padding(
@@ -169,7 +199,7 @@ class _TelematicsPageState extends State<TelematicsPage> {
                             ),
                           ),
                         );
-                      },
+                      }).toList(),
                     ),
                   ),
           ],
